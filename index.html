@@ -46,6 +46,40 @@
 </style>
 </head>
 <body>
+<div id="pinGate">
+  <div class="pg-box">
+    <div class="pg-lock">🔒</div>
+    <div class="pg-title">ใส่ PIN เพื่อเข้าใช้งาน</div>
+    <div class="pg-dots"><i></i><i></i><i></i><i></i></div>
+    <input id="pgInput" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" autofocus>
+    <div class="pg-pad">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button data-k="C" class="pg-alt">C</button><button data-k="0">0</button><button data-k="<" class="pg-alt">⌫</button>
+    </div>
+    <div class="pg-err" id="pgErr"></div>
+  </div>
+</div>
+<style>
+#pinGate{position:fixed;inset:0;z-index:99999;background:#0d1117;display:flex;align-items:center;justify-content:center;padding:20px}
+#pinGate.pg-hide{display:none}
+.pg-box{background:#161b22;border:1px solid #2b333d;border-radius:14px;padding:28px 26px;width:100%;max-width:320px;text-align:center}
+.pg-lock{font-size:32px;margin-bottom:8px}
+.pg-title{color:#e6edf3;font-size:15px;margin-bottom:18px}
+.pg-dots{display:flex;gap:12px;justify-content:center;margin-bottom:20px}
+.pg-dots i{width:12px;height:12px;border-radius:50%;border:1.5px solid #8b949e;transition:.15s}
+.pg-dots i.on{background:#58a6ff;border-color:#58a6ff}
+#pgInput{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.pg-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pg-pad button{background:#1c232d;border:1px solid #2b333d;color:#e6edf3;font-size:19px;font-family:'Consolas','SF Mono',monospace;padding:14px 0;border-radius:9px;cursor:pointer;transition:.12s}
+.pg-pad button:hover{background:#2b333d}
+.pg-pad button:active{background:#58a6ff;color:#0d1117}
+.pg-pad button.pg-alt{font-size:15px;color:#8b949e}
+.pg-err{color:#f85149;font-size:12px;height:18px;margin-top:12px}
+@keyframes pgShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.pg-shake{animation:pgShake .3s}
+</style>
 <h1>💰 แบบจำลองงบรวม + ภาษี/ค่าโอน/นายหน้า</h1>
 <p class="sub">โซนเขาใหญ่ ใกล้ M6 · รวม 27,286 ตรว. = 68-0-86 ร-ง-ว · ปรับงบรวมและราคาแปลงใหญ่ → คำนวณราคาแปลงอื่น + ประเมินภาษี ค่าโอน และค่านายหน้า · <a href="land-plots-dashboard.html">← กลับ dashboard ที่ดิน</a></p>
 
@@ -214,6 +248,39 @@ function calc(){
     (diff<0?` · ถ้าจะคงฐาน 10 ลบ./ไร่ งบรวมต้องเป็น <b class="mono">${f(needBudget,1)} ลบ.</b> หรือลดแปลงใหญ่เหลือ <b class="mono">${f((budget-rai(REST_WA)*base)/rai(BIG_WA))} ลบ./ไร่</b>`:'');
 }
 calc();
+</script>
+<script>
+(function(){
+  var PIN='7728', KEY='lb800_ok';
+  var gate=document.getElementById('pinGate');
+  if(!gate) return;
+  if(sessionStorage.getItem(KEY)==='1'){ gate.classList.add('pg-hide'); return; }
+  document.body.style.overflow='hidden';
+  var buf='', dots=gate.querySelectorAll('.pg-dots i'), err=document.getElementById('pgErr'), box=gate.querySelector('.pg-box');
+  function draw(){ dots.forEach(function(d,i){ d.classList.toggle('on', i<buf.length); }); }
+  function fail(){ err.textContent='PIN ไม่ถูกต้อง'; box.classList.add('pg-shake');
+    setTimeout(function(){ box.classList.remove('pg-shake'); buf=''; draw(); },320); }
+  function ok(){ try{ sessionStorage.setItem(KEY,'1'); }catch(e){}
+    gate.classList.add('pg-hide'); document.body.style.overflow=''; }
+  function push(k){
+    err.textContent='';
+    if(k==='C'){ buf=''; }
+    else if(k==='<'){ buf=buf.slice(0,-1); }
+    else if(buf.length<4){ buf+=k; }
+    draw();
+    if(buf.length===4){ setTimeout(function(){ buf===PIN?ok():fail(); },120); }
+  }
+  gate.querySelectorAll('.pg-pad button').forEach(function(b){
+    b.addEventListener('click',function(){ push(b.dataset.k); });
+  });
+  document.addEventListener('keydown',function(e){
+    if(gate.classList.contains('pg-hide')) return;
+    if(/^[0-9]$/.test(e.key)) push(e.key);
+    else if(e.key==='Backspace'){ e.preventDefault(); push('<'); }
+    else if(e.key==='Escape') push('C');
+  });
+  draw();
+})();
 </script>
 </body>
 </html>
