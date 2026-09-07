@@ -100,6 +100,11 @@
     <input type="number" id="brkN" min="0" max="5" step="0.5" value="3">
   </div>
   <div class="ctrl">
+    <label>💰 มัดจำ (% ของราคาขาย)</label>
+    <input type="range" id="depR" min="0" max="30" step="1" value="10">
+    <input type="number" id="depN" min="0" max="30" step="1" value="10">
+  </div>
+  <div class="ctrl">
     <label>📅 ปีถือครอง</label>
     <input type="range" id="holdR" min="1" max="10" step="1" value="10">
     <input type="number" id="holdN" min="1" max="10" step="1" value="10">
@@ -123,6 +128,8 @@
   <div class="kpi red"><div class="label">ภาษี+ค่าโอนรวม (ฝั่งขาย)</div><div class="val" id="kTax">—<span class="unit"> ลบ.</span></div><div class="label mono" id="kTaxPct"></div></div>
   <div class="kpi purple"><div class="label">ค่านายหน้ารวม</div><div class="val" id="kBrk">—<span class="unit"> ลบ.</span></div></div>
   <div class="kpi green"><div class="label">💵 ผู้ขายรับสุทธิรวม</div><div class="val" id="kNet">—<span class="unit"> ลบ.</span></div><div class="label mono" id="kNetPct"></div></div>
+  <div class="kpi gold"><div class="label">💰 มัดจำรวม (รับวันทำสัญญา)</div><div class="val" id="kDep">—<span class="unit"> ลบ.</span></div><div class="label mono" id="kDepNote"></div></div>
+  <div class="kpi green"><div class="label">📐 สุทธิเฉลี่ยต่อไร่ (ทั้ง 7 แปลง)</div><div class="val" id="kNetRai">—<span class="unit"> ลบ./ไร่</span></div><div class="label mono" id="kNetWa"></div></div>
 </div>
 
 <h2>📋 รายแปลง — ราคาขาย · ภาษี · ค่าโอน · นายหน้า · สุทธิ</h2>
@@ -137,7 +144,12 @@
       <th id="thStamp">อากร (ลบ.)</th>
       <th title="ภาษีเงินได้หัก ณ ที่จ่าย — วิธีก้าวหน้า ป.100/2543 ฐานราคาประเมิน">WHT (ลบ.)</th>
       <th title="% ของราคาขาย">นายหน้า (ลบ.)</th>
-      <th>รวมหัก (ลบ.)</th><th>สุทธิ (ลบ.)</th><th>หัก %</th>
+      <th>รวมหัก (ลบ.)</th><th>สุทธิ (ลบ.)</th>
+      <th title="มัดจำ % ของราคาขาย — รับวันทำสัญญา" id="thDep">มัดจำ (ลบ.)</th>
+      <th title="สุทธิ − มัดจำ = เงินที่ยังรอรับวันโอน">รับวันโอน (ลบ.)</th>
+      <th title="สุทธิหลังหักทุกอย่าง ÷ จำนวนไร่">สุทธิ/ไร่ (ลบ.)</th>
+      <th title="สุทธิหลังหักทุกอย่าง ÷ จำนวน ตร.ว.">สุทธิ/ตรว. (บาท)</th>
+      <th>หัก %</th>
     </tr></thead>
     <tbody id="tbody"></tbody>
   </table>
@@ -146,7 +158,7 @@
 
 <p class="note">
 ⚠️ เพื่อการวิเคราะห์/วางแผนเท่านั้น ไม่ใช่คำแนะนำภาษี — ตัวเลขจริงควรให้กรมที่ดิน/นักบัญชีคำนวณ ณ วันโอน<br>
-สูตร: <b>ค่าโอน</b> 2% ของราคาประเมิน · <b>อากรแสตมป์</b> 0.5% ของ max(ขาย, ประเมิน) — ถ้าถือ &lt;5 ปี เสีย <b>SBT 3.3%</b> แทน · <b>WHT</b> ภาษีก้าวหน้าฐานราคาประเมิน หารปีถือครอง (มรดก/ให้ฟรี: หักเหมา 50% + เพดาน 20% ของราคาประเมิน) · <b>นายหน้า</b> % ของราคาขาย<br>
+สูตร: <b>ค่าโอน</b> 2% ของราคาประเมิน · <b>อากรแสตมป์</b> 0.5% ของ max(ขาย, ประเมิน) — ถ้าถือ &lt;5 ปี เสีย <b>SBT 3.3%</b> แทน · <b>WHT</b> ภาษีก้าวหน้าฐานราคาประเมิน หารปีถือครอง (มรดก/ให้ฟรี: หักเหมา 50% + เพดาน 20% ของราคาประเมิน) · <b>นายหน้า</b> % ของราคาขาย · <b>มัดจำ</b> % ของราคาขาย (รับวันทำสัญญา ไม่ใช่รายรับเพิ่ม — หักออกจากสุทธิเหลือเป็น "รับวันโอน") · <b>สุทธิ/ไร่ · สุทธิ/ตรว.</b> = สุทธิหลังหักภาษี+ค่าโอน+นายหน้า ÷ เนื้อที่<br>
 ราคาประเมิน/ตรว. ตามโฉนดจริง: ① 11,500 · ② 350 · ③–⑦ 660 บาท · 1 ไร่ = 400 ตรว.
 </p>
 
@@ -182,7 +194,7 @@ function wht(appraised){
 // ===== controls =====
 function sync(a,b){a.addEventListener('input',()=>{b.value=a.value;calc();});}
 const $=id=>document.getElementById(id);
-[['budgetR','budgetN'],['bigR','bigN'],['brkR','brkN'],['holdR','holdN']].forEach(([r,n])=>{sync($(r),$(n));sync($(n),$(r));});
+[['budgetR','budgetN'],['bigR','bigN'],['brkR','brkN'],['depR','depN'],['holdR','holdN']].forEach(([r,n])=>{sync($(r),$(n));sync($(n),$(r));});
 document.querySelectorAll('[data-acq]').forEach(c=>c.addEventListener('click',()=>{
   document.querySelectorAll('[data-acq]').forEach(x=>x.classList.remove('active'));
   c.classList.add('active');acqMode=c.dataset.acq;calc();
@@ -194,6 +206,8 @@ document.querySelectorAll('[data-trf]').forEach(c=>c.addEventListener('click',()
 
 function calc(){
   const budget=+$('budgetN').value, bigRate=+$('bigN').value, brkPct=+$('brkN').value/100;
+  const depPct=+$('depN').value/100;
+  $('thDep').textContent='มัดจำ '+(+$('depN').value)+'% (ลบ.)';
   holdYears=+$('holdN').value;
   const sbtMode=holdYears<5;
   $('holdHint').textContent=sbtMode?'⚠️ <5 ปี → เสีย SBT 3.3% แทนอากร 0.5%':'≥5 ปี → อากรแสตมป์ 0.5%';
@@ -210,7 +224,7 @@ function calc(){
   $('kRate').innerHTML=(restRate<0?'<span style="color:var(--red)">':'')+f(restRate)+'<span class="unit"> ลบ./ไร่</span>';
   $('kRateWa').textContent='= '+f(restRate*1e6/400,0)+' บาท/ตรว.'+(adjSum?` · กลางลดจาก ${f(restVal/rai(REST_WA))} เพราะเติมให้บางแปลง`:'');
 
-  let html='',T={sell:0,tax:0,brk:0,net:0};
+  let html='',T={sell:0,tax:0,brk:0,net:0,dep:0};
   for(const p of plots){
     const rate=p.big?bigRate:restRate+(+p.adj||0);
     const sellM=rai(p.area)*rate, sell=sellM*1e6;      // บาท
@@ -220,13 +234,16 @@ function calc(){
     const w=wht(apr);
     const brk=sell*brkPct;
     const cut=trf+stamp+w+brk, net=sell-cut;
-    T.sell+=sell;T.tax+=trf+stamp+w;T.brk+=brk;T.net+=net;
+    const dep=sell*depPct, atTransfer=net-dep;        // มัดจำคิดจากราคาขาย · รับวันโอน = สุทธิ − มัดจำ
+    const netRai=rai(p.area)>0?net/1e6/rai(p.area):0; // ลบ./ไร่
+    const netWa=p.area>0?net/p.area:0;                // บาท/ตรว.
+    T.sell+=sell;T.tax+=trf+stamp+w;T.brk+=brk;T.net+=net;T.dep+=dep;
     const adjCell=p.big?'<td style="color:var(--muted)">—</td>':
       `<td><input type="number" class="adj-in" data-n="${p.n}" value="${p.adj}" step="0.5" min="-5" max="10" style="width:70px;background:var(--panel2);border:1px solid var(--line);color:${p.adj>0?'var(--green)':p.adj<0?'var(--red)':'var(--text)'};border-radius:5px;padding:3px 6px;font-family:var(--mono);font-size:12px;text-align:right"></td>`;
-    html+=`<tr${p.big?' class="big"':''}><td>${p.n} ${p.name}</td><td>${f(rai(p.area))}</td>${adjCell}<td>${f(rate)}</td><td>${f(sellM)}</td><td>${f(apr/1e6)}</td><td>${f(trf/1e6)}</td><td>${f(stamp/1e6)}</td><td>${f(w/1e6)}</td><td style="color:var(--purple)">${f(brk/1e6)}</td><td style="color:var(--orange)">${f(cut/1e6)}</td><td style="color:var(--green)">${f(net/1e6)}</td><td>${(sell>0?cut/sell*100:0).toFixed(1)}%</td></tr>`;
+    html+=`<tr${p.big?' class="big"':''}><td>${p.n} ${p.name}</td><td>${f(rai(p.area))}</td>${adjCell}<td>${f(rate)}</td><td>${f(sellM)}</td><td>${f(apr/1e6)}</td><td>${f(trf/1e6)}</td><td>${f(stamp/1e6)}</td><td>${f(w/1e6)}</td><td style="color:var(--purple)">${f(brk/1e6)}</td><td style="color:var(--orange)">${f(cut/1e6)}</td><td style="color:var(--green)">${f(net/1e6)}</td><td style="color:var(--accent2)">${f(dep/1e6)}</td><td>${f(atTransfer/1e6)}</td><td style="color:var(--green)">${f(netRai)}</td><td class="mono">${f(netWa,0)}</td><td>${(sell>0?cut/sell*100:0).toFixed(1)}%</td></tr>`;
   }
   const cutT=T.tax+T.brk;
-  html+=`<tr class="total"><td>รวม 7 แปลง</td><td>${f(rai(TOTAL_WA))}</td><td></td><td></td><td>${f(T.sell/1e6)}</td><td></td><td colspan="3" style="color:var(--orange)">ภาษี+โอน ${f(T.tax/1e6)}</td><td style="color:var(--purple)">${f(T.brk/1e6)}</td><td style="color:var(--orange)">${f(cutT/1e6)}</td><td style="color:var(--green)">${f(T.net/1e6)}</td><td>${(cutT/T.sell*100).toFixed(1)}%</td></tr>`;
+  html+=`<tr class="total"><td>รวม 7 แปลง</td><td>${f(rai(TOTAL_WA))}</td><td></td><td></td><td>${f(T.sell/1e6)}</td><td></td><td colspan="3" style="color:var(--orange)">ภาษี+โอน ${f(T.tax/1e6)}</td><td style="color:var(--purple)">${f(T.brk/1e6)}</td><td style="color:var(--orange)">${f(cutT/1e6)}</td><td style="color:var(--green)">${f(T.net/1e6)}</td><td style="color:var(--accent2)">${f(T.dep/1e6)}</td><td>${f((T.net-T.dep)/1e6)}</td><td style="color:var(--green)">${f(T.net/1e6/rai(TOTAL_WA))}</td><td class="mono">${f(T.net/TOTAL_WA,0)}</td><td>${(cutT/T.sell*100).toFixed(1)}%</td></tr>`;
   $('tbody').innerHTML=html;
   document.querySelectorAll('.adj-in').forEach(inp=>inp.addEventListener('change',()=>{
     const p=plots.find(x=>x.n===inp.dataset.n);
@@ -239,6 +256,10 @@ function calc(){
   $('kBrk').innerHTML=f(T.brk/1e6)+'<span class="unit"> ลบ.</span>';
   $('kNet').innerHTML=f(T.net/1e6)+'<span class="unit"> ลบ.</span>';
   $('kNetPct').textContent='= '+(T.net/T.sell*100).toFixed(1)+'% ของราคาขาย';
+  $('kDep').innerHTML=f(T.dep/1e6)+'<span class="unit"> ลบ.</span>';
+  $('kDepNote').textContent=(+$('depN').value)+'% ของราคาขาย · เหลือรับวันโอน '+f((T.net-T.dep)/1e6)+' ลบ.';
+  $('kNetRai').innerHTML=f(T.net/1e6/rai(TOTAL_WA))+'<span class="unit"> ลบ./ไร่</span>';
+  $('kNetWa').textContent='= '+f(T.net/TOTAL_WA,0)+' บาท/ตรว. (หลังหักทุกอย่างแล้ว)';
 
   const base=10, diff=(restRate-base)/base*100;
   const needBudget=bigVal+rai(REST_WA)*base;
