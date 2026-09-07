@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>แบบจำลองงบ 800 ล้าน + ภาษี/ค่าโอน/นายหน้า</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c232d; --line:#2b333d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --accent2:#d29922;
+    --green:#3fb950; --red:#f85149; --purple:#bc8cff; --orange:#f0883e;
+    --mono:'Consolas','SF Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.6;padding:24px;max-width:1100px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:4px}
+  h2{font-size:15px;margin:22px 0 10px}
+  .sub{color:var(--muted);font-size:12px;margin-bottom:18px}
+  .mono{font-family:var(--mono)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+  .ctrl{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  .ctrl label{min-width:200px;font-size:13px}
+  .ctrl input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
+  .ctrl input[type=number]{width:90px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:5px 8px;font-family:var(--mono);font-size:13px;text-align:right}
+  .chip{display:inline-block;padding:3px 12px;border:1px solid var(--line);border-radius:14px;font-size:12px;cursor:pointer;color:var(--muted);user-select:none}
+  .chip.active{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,0.08)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:8px;padding:12px 14px}
+  .kpi.gold{border-top-color:var(--accent2)} .kpi.green{border-top-color:var(--green)}
+  .kpi.red{border-top-color:var(--red)} .kpi.purple{border-top-color:var(--purple)}
+  .kpi .label{color:var(--muted);font-size:11px}
+  .kpi .val{font-size:19px;font-weight:700;font-family:var(--mono)}
+  .kpi .unit{font-size:12px;color:var(--muted);font-weight:400}
+  .tblwrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
+  th,td{padding:6px 9px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--mono)}
+  th{color:var(--muted);font-weight:600;font-size:11px}
+  th:first-child,td:first-child{text-align:left;font-family:inherit}
+  tr.big td{color:var(--accent2)}
+  tr.total td{font-weight:700;border-top:2px solid var(--line);border-bottom:none}
+  .note{color:var(--muted);font-size:11px;margin-top:12px;line-height:1.7}
+  .warn{color:var(--accent2)}
+  .bar{height:8px;border-radius:4px;background:var(--panel2);overflow:hidden;margin-top:4px}
+  .bar>div{height:100%;background:var(--accent2)}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<h1>💰 แบบจำลองงบรวม + ภาษี/ค่าโอน/นายหน้า</h1>
+<p class="sub">โซนเขาใหญ่ ใกล้ M6 · รวม 27,286 ตรว. = 68-0-86 ร-ง-ว · ปรับงบรวมและราคาแปลงใหญ่ → คำนวณราคาแปลงอื่น + ประเมินภาษี ค่าโอน และค่านายหน้า · <a href="land-plots-dashboard.html">← กลับ dashboard ที่ดิน</a></p>
+
+<div class="panel">
+  <div class="ctrl">
+    <label>🎯 งบรวมทั้งหมด (ล้านบาท)</label>
+    <input type="range" id="budgetR" min="600" max="1100" step="5" value="800">
+    <input type="number" id="budgetN" min="600" max="1100" step="5" value="800">
+  </div>
+  <div class="ctrl">
+    <label>🟢 แปลงใหญ่ ① (32.01 ไร่) ลบ./ไร่</label>
+    <input type="range" id="bigR" min="8" max="20" step="0.1" value="15">
+    <input type="number" id="bigN" min="8" max="20" step="0.1" value="15">
+  </div>
+  <div class="ctrl">
+    <label>🤝 ค่านายหน้า (% ของราคาขาย)</label>
+    <input type="range" id="brkR" min="0" max="5" step="0.5" value="3">
+    <input type="number" id="brkN" min="0" max="5" step="0.5" value="3">
+  </div>
+  <div class="ctrl">
+    <label>📅 ปีถือครอง</label>
+    <input type="range" id="holdR" min="1" max="10" step="1" value="10">
+    <input type="number" id="holdN" min="1" max="10" step="1" value="10">
+    <span class="note" id="holdHint" style="margin-top:0"></span>
+  </div>
+  <div class="ctrl">
+    <label>📜 ได้ที่ดินมาโดย</label>
+    <span class="chip active" data-acq="free">มรดก/ให้โดยเสน่หา</span>
+    <span class="chip" data-acq="buy">ซื้อมา/ทางอื่น</span>
+    <label style="min-width:0;margin-left:16px">💸 ค่าโอน 2% ฝ่ายขายจ่าย</label>
+    <span class="chip active" data-trf="0.5">ครึ่งเดียว (50/50)</span>
+    <span class="chip" data-trf="1">เต็มจำนวน</span>
+    <span class="chip" data-trf="0">ผู้ซื้อจ่ายหมด</span>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi gold"><div class="label">แปลงใหญ่ ① รับ (ก่อนหัก)</div><div class="val" id="kBig">—<span class="unit"> ลบ.</span></div><div class="bar"><div id="kBigBar"></div></div></div>
+  <div class="kpi green"><div class="label">เหลือให้ 6 แปลง (36.21 ไร่)</div><div class="val" id="kRest">—<span class="unit"> ลบ.</span></div></div>
+  <div class="kpi"><div class="label">👉 แปลงอื่นตกไร่ละ</div><div class="val" id="kRate">—<span class="unit"> ลบ./ไร่</span></div><div class="label mono" id="kRateWa"></div></div>
+  <div class="kpi red"><div class="label">ภาษี+ค่าโอนรวม (ฝั่งขาย)</div><div class="val" id="kTax">—<span class="unit"> ลบ.</span></div><div class="label mono" id="kTaxPct"></div></div>
+  <div class="kpi purple"><div class="label">ค่านายหน้ารวม</div><div class="val" id="kBrk">—<span class="unit"> ลบ.</span></div></div>
+  <div class="kpi green"><div class="label">💵 ผู้ขายรับสุทธิรวม</div><div class="val" id="kNet">—<span class="unit"> ลบ.</span></div><div class="label mono" id="kNetPct"></div></div>
+</div>
+
+<h2>📋 รายแปลง — ราคาขาย · ภาษี · ค่าโอน · นายหน้า · สุทธิ</h2>
+<div class="panel tblwrap">
+  <table>
+    <thead><tr>
+      <th>แปลง</th><th>ไร่</th>
+      <th title="เพิ่ม/ลด ลบ./ไร่ ให้แปลงนี้ — งบรวมคงเดิม: ระบบลดราคากลางของแปลงอื่นชดเชยอัตโนมัติ">ปรับ ± ลบ./ไร่</th>
+      <th>ลบ./ไร่</th><th>ขาย (ลบ.)</th>
+      <th title="ราคาประเมินกรมที่ดิน (จากโฉนดจริง 2026-06-06)">ประเมิน (ลบ.)</th>
+      <th title="2% ของราคาประเมิน × สัดส่วนที่ฝ่ายขายจ่าย">ค่าโอน (ลบ.)</th>
+      <th id="thStamp">อากร (ลบ.)</th>
+      <th title="ภาษีเงินได้หัก ณ ที่จ่าย — วิธีก้าวหน้า ป.100/2543 ฐานราคาประเมิน">WHT (ลบ.)</th>
+      <th title="% ของราคาขาย">นายหน้า (ลบ.)</th>
+      <th>รวมหัก (ลบ.)</th><th>สุทธิ (ลบ.)</th><th>หัก %</th>
+    </tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="note" id="compareNote"></div>
+</div>
+
+<p class="note">
+⚠️ เพื่อการวิเคราะห์/วางแผนเท่านั้น ไม่ใช่คำแนะนำภาษี — ตัวเลขจริงควรให้กรมที่ดิน/นักบัญชีคำนวณ ณ วันโอน<br>
+สูตร: <b>ค่าโอน</b> 2% ของราคาประเมิน · <b>อากรแสตมป์</b> 0.5% ของ max(ขาย, ประเมิน) — ถ้าถือ &lt;5 ปี เสีย <b>SBT 3.3%</b> แทน · <b>WHT</b> ภาษีก้าวหน้าฐานราคาประเมิน หารปีถือครอง (มรดก/ให้ฟรี: หักเหมา 50% + เพดาน 20% ของราคาประเมิน) · <b>นายหน้า</b> % ของราคาขาย<br>
+ราคาประเมิน/ตรว. ตามโฉนดจริง: ① 11,500 · ② 350 · ③–⑦ 660 บาท · 1 ไร่ = 400 ตรว.
+</p>
+
+<script>
+const plots=[
+  {n:'①',name:'ควรพันธุ์ (ใหญ่)',area:12803,apr:11500,big:true},
+  {n:'②',name:'ควรพันธุ์ (แปลงเล็ก)',area:3357,apr:350,adj:0},
+  {n:'③',name:'เจี๊ยบ',area:4000,apr:660,adj:0},
+  {n:'④',name:'แจ๊ว',area:1415,apr:660,adj:0},
+  {n:'⑤',name:'พี่ตุ๊',area:1756,apr:660,adj:0},
+  {n:'⑥',name:'ลุงรง',area:1912,apr:660,adj:0},
+  {n:'⑦',name:'กบ',area:2043,apr:660,adj:0},
+];
+const TOTAL_WA=plots.reduce((s,p)=>s+p.area,0);
+const BIG_WA=plots.find(p=>p.big).area, REST_WA=TOTAL_WA-BIG_WA;
+const rai=wa=>wa/400;
+const f=(n,d=2)=>n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+// ===== ภาษี — สูตรเดียวกับ land-plots-dashboard.html =====
+// ขั้นเงินได้ปัจจุบัน (5–35%) — วิธี WHT เริ่ม 5% บาทแรก ไม่มียกเว้น 150k (ป.100/2543)
+const SCHED=[[300000,.05],[200000,.10],[250000,.15],[250000,.20],[1000000,.25],[3000000,.30],[Infinity,.35]];
+function pit(base){let tax=0,rem=base;for(const[w,r]of SCHED){if(rem<=0)break;const t=Math.min(rem,w);tax+=t*r;rem-=t;}return tax;}
+const DED={1:.92,2:.84,3:.77,4:.71,5:.65,6:.60,7:.55};
+let holdYears=10, acqMode='free', trfShare=0.5;
+function wht(appraised){
+  const y=Math.min(Math.max(Math.ceil(holdYears||1),1),10);
+  const ded=acqMode==='free'?0.50:(DED[y]??0.50);
+  let tax=pit(appraised*(1-ded)/y)*y;
+  if(acqMode==='free')tax=Math.min(tax,appraised*0.20);
+  return tax;
+}
+
+// ===== controls =====
+function sync(a,b){a.addEventListener('input',()=>{b.value=a.value;calc();});}
+const $=id=>document.getElementById(id);
+[['budgetR','budgetN'],['bigR','bigN'],['brkR','brkN'],['holdR','holdN']].forEach(([r,n])=>{sync($(r),$(n));sync($(n),$(r));});
+document.querySelectorAll('[data-acq]').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('[data-acq]').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active');acqMode=c.dataset.acq;calc();
+}));
+document.querySelectorAll('[data-trf]').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('[data-trf]').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active');trfShare=+c.dataset.trf;calc();
+}));
+
+function calc(){
+  const budget=+$('budgetN').value, bigRate=+$('bigN').value, brkPct=+$('brkN').value/100;
+  holdYears=+$('holdN').value;
+  const sbtMode=holdYears<5;
+  $('holdHint').textContent=sbtMode?'⚠️ <5 ปี → เสีย SBT 3.3% แทนอากร 0.5%':'≥5 ปี → อากรแสตมป์ 0.5%';
+  $('thStamp').textContent=sbtMode?'SBT 3.3% (ลบ.)':'อากร (ลบ.)';
+  const bigVal=rai(BIG_WA)*bigRate, restVal=budget-bigVal;
+  // ราคากลาง: แปลง ②–⑦ ที่ปรับ + จะดึงจากราคากลางของทุกแปลงที่เหลือ → งบรวมคงเดิม
+  // rate_i = กลาง + adj_i โดย Σ rai_i×(กลาง+adj_i) = restVal → กลาง = (restVal − Σ rai_i×adj_i) ÷ Σ rai_i
+  const adjSum=plots.filter(p=>!p.big).reduce((s,p)=>s+rai(p.area)*(+p.adj||0),0);
+  const restRate=(restVal-adjSum)/rai(REST_WA);   // = ราคากลางหลังหักส่วนที่เติมให้แปลงอื่น
+
+  $('kBig').innerHTML=f(bigVal)+'<span class="unit"> ลบ.</span>';
+  $('kBigBar').style.width=Math.min(100,Math.max(0,bigVal/budget*100))+'%';
+  $('kRest').innerHTML=(restVal<0?'<span style="color:var(--red)">':'')+f(restVal)+'<span class="unit"> ลบ.</span>';
+  $('kRate').innerHTML=(restRate<0?'<span style="color:var(--red)">':'')+f(restRate)+'<span class="unit"> ลบ./ไร่</span>';
+  $('kRateWa').textContent='= '+f(restRate*1e6/400,0)+' บาท/ตรว.'+(adjSum?` · กลางลดจาก ${f(restVal/rai(REST_WA))} เพราะเติมให้บางแปลง`:'');
+
+  let html='',T={sell:0,tax:0,brk:0,net:0};
+  for(const p of plots){
+    const rate=p.big?bigRate:restRate+(+p.adj||0);
+    const sellM=rai(p.area)*rate, sell=sellM*1e6;      // บาท
+    const apr=p.area*p.apr;                             // ราคาประเมินรวม (บาท)
+    const trf=apr*0.02*trfShare;
+    const stamp=Math.max(sell,apr)*(sbtMode?0.033:0.005);
+    const w=wht(apr);
+    const brk=sell*brkPct;
+    const cut=trf+stamp+w+brk, net=sell-cut;
+    T.sell+=sell;T.tax+=trf+stamp+w;T.brk+=brk;T.net+=net;
+    const adjCell=p.big?'<td style="color:var(--muted)">—</td>':
+      `<td><input type="number" class="adj-in" data-n="${p.n}" value="${p.adj}" step="0.5" min="-5" max="10" style="width:70px;background:var(--panel2);border:1px solid var(--line);color:${p.adj>0?'var(--green)':p.adj<0?'var(--red)':'var(--text)'};border-radius:5px;padding:3px 6px;font-family:var(--mono);font-size:12px;text-align:right"></td>`;
+    html+=`<tr${p.big?' class="big"':''}><td>${p.n} ${p.name}</td><td>${f(rai(p.area))}</td>${adjCell}<td>${f(rate)}</td><td>${f(sellM)}</td><td>${f(apr/1e6)}</td><td>${f(trf/1e6)}</td><td>${f(stamp/1e6)}</td><td>${f(w/1e6)}</td><td style="color:var(--purple)">${f(brk/1e6)}</td><td style="color:var(--orange)">${f(cut/1e6)}</td><td style="color:var(--green)">${f(net/1e6)}</td><td>${(sell>0?cut/sell*100:0).toFixed(1)}%</td></tr>`;
+  }
+  const cutT=T.tax+T.brk;
+  html+=`<tr class="total"><td>รวม 7 แปลง</td><td>${f(rai(TOTAL_WA))}</td><td></td><td></td><td>${f(T.sell/1e6)}</td><td></td><td colspan="3" style="color:var(--orange)">ภาษี+โอน ${f(T.tax/1e6)}</td><td style="color:var(--purple)">${f(T.brk/1e6)}</td><td style="color:var(--orange)">${f(cutT/1e6)}</td><td style="color:var(--green)">${f(T.net/1e6)}</td><td>${(cutT/T.sell*100).toFixed(1)}%</td></tr>`;
+  $('tbody').innerHTML=html;
+  document.querySelectorAll('.adj-in').forEach(inp=>inp.addEventListener('change',()=>{
+    const p=plots.find(x=>x.n===inp.dataset.n);
+    if(p)p.adj=+inp.value||0;
+    calc();
+  }));
+
+  $('kTax').innerHTML=f(T.tax/1e6)+'<span class="unit"> ลบ.</span>';
+  $('kTaxPct').textContent='= '+(T.tax/T.sell*100).toFixed(2)+'% ของราคาขาย';
+  $('kBrk').innerHTML=f(T.brk/1e6)+'<span class="unit"> ลบ.</span>';
+  $('kNet').innerHTML=f(T.net/1e6)+'<span class="unit"> ลบ.</span>';
+  $('kNetPct').textContent='= '+(T.net/T.sell*100).toFixed(1)+'% ของราคาขาย';
+
+  const base=10, diff=(restRate-base)/base*100;
+  const needBudget=bigVal+rai(REST_WA)*base;
+  $('compareNote').innerHTML=
+    restVal<0?'<span style="color:var(--red)">❌ งบไม่พอจ่ายแปลงใหญ่ — ลดราคาแปลงใหญ่หรือเพิ่มงบ</span>':
+    `เทียบฐานกลุ่มสีฟ้าเดิม 10 ลบ./ไร่: แปลงอื่นได้ <b class="${diff>=0?'':'warn'}">${diff>=0?'+':''}${f(diff,1)}%</b>`+
+    (diff<0?` · ถ้าจะคงฐาน 10 ลบ./ไร่ งบรวมต้องเป็น <b class="mono">${f(needBudget,1)} ลบ.</b> หรือลดแปลงใหญ่เหลือ <b class="mono">${f((budget-rai(REST_WA)*base)/rai(BIG_WA))} ลบ./ไร่</b>`:'');
+}
+calc();
+</script>
+</body>
+</html>
